@@ -115,6 +115,15 @@ class StepIndicator(context: Context, attrs: AttributeSet? = null) : LinearLayou
                                     setColor(it.animatedValue as Int)
                                 }
                             }
+                            addListener(object : Animator.AnimatorListener {
+                                override fun onAnimationStart(animation: Animator) {}
+
+                                override fun onAnimationEnd(animation: Animator) { animating = false }
+
+                                override fun onAnimationCancel(animation: Animator) {}
+
+                                override fun onAnimationRepeat(animation: Animator) {}
+                            })
                         }.start()
                     }
 
