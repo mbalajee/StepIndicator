@@ -18,6 +18,7 @@ import android.widget.TextView
 import android.animation.ValueAnimator.AnimatorUpdateListener
 import android.view.animation.*
 import com.google.android.material.animation.AnimationUtils
+import kotlin.math.abs
 
 
 class StepIndicator(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
@@ -33,7 +34,7 @@ class StepIndicator(context: Context, attrs: AttributeSet? = null) : LinearLayou
     private val stepWidth: Int get() = width / steps
     private val dashWidth: Int get() = stepWidth - indicatorSize
 
-    private val dashAnimDuration = 500L
+    private var dashAnimDuration = 250L
 
     private var animating = false
 
@@ -92,97 +93,103 @@ class StepIndicator(context: Context, attrs: AttributeSet? = null) : LinearLayou
     }
 
     fun stepUp() {
-
         if (animating || currentStep == steps - 2) return
+        stepUpBy(1, dashAnimDuration)
+    }
+
+    fun stepDown() {
+        if (animating || currentStep < 0) return
+        stepDownBy(1, dashAnimDuration)
+    }
+
+    fun stepTo(stepNo: Int) {
+
+        if (stepNo == currentStep + 2) return
+
+        val animDuration = dashAnimDuration / abs(currentStep + 2 - stepNo).let { if (it == 0) 1 else it }
+
+        if (stepNo > currentStep + 2) {
+            stepUpBy(abs(currentStep + 2 - stepNo), animDuration)
+        } else {
+            stepDownBy(abs(currentStep + 2 - stepNo), animDuration)
+        }
+    }
+
+    private fun stepDownBy(count: Int, animDuration: Long) {
+
+        if (animating || count == 0 || currentStep < 0) return
+
+        val currentDash = dashViews[currentStep--]
+
+        animating = true
+
+        ValueAnimator.ofObject(ArgbEvaluator(), Color.GREEN, Color.RED).apply {
+            duration = animDuration
+            addUpdateListener { updateIndicatorColor(currentStep + 2, it.animatedValue as Int) }
+            addListener(object : AnimatorListener {
+                override fun onAnimationEnd(animation: Animator) {
+                    currentDash.startAnimation(
+                        ScaleAnimation(1f, 0f, 1f, 1f).apply {
+                            fillAfter = true
+                            duration = animDuration
+                            setAnimationListener(object : AnimationListener {
+                                override fun onAnimationEnd(animation: Animation) {
+                                    animating = false
+                                    stepDownBy(count - 1, animDuration)
+                                }
+                            })
+                        }
+                    )
+                }
+            })
+        }.start()
+    }
+
+    private fun stepUpBy(count: Int, animDuration: Long) {
+
+        if (animating || count == 0 || currentStep == steps - 2) return
 
         val currentDash = dashViews[++currentStep]
         currentDash.scaleX = 1f
 
+        animating = true
+
         currentDash.startAnimation(
             ScaleAnimation(0f, 1f, 1f, 1f).apply {
                 fillAfter = true
-                duration = dashAnimDuration
-                setAnimationListener(object : Animation.AnimationListener {
-                    override fun onAnimationStart(animation: Animation) {
-                        animating = true
-                    }
-
+                duration = animDuration
+                setAnimationListener(object : AnimationListener {
                     override fun onAnimationEnd(animation: Animation) {
                         ValueAnimator.ofObject(ArgbEvaluator(), Color.RED, Color.GREEN).apply {
-                            duration = dashAnimDuration / 2
-                            addUpdateListener {
-                                with(indicatorViews[currentStep + 1].background as GradientDrawable) {
-                                    setColor(it.animatedValue as Int)
+                            duration = animDuration
+                            addUpdateListener { updateIndicatorColor(currentStep + 1, it.animatedValue as Int) }
+                            addListener(object : AnimatorListener {
+                                override fun onAnimationEnd(animation: Animator) {
+                                    animating = false
+                                    stepUpBy(count - 1, animDuration)
                                 }
-                            }
-                            addListener(object : Animator.AnimatorListener {
-                                override fun onAnimationStart(animation: Animator) {}
-
-                                override fun onAnimationEnd(animation: Animator) { animating = false }
-
-                                override fun onAnimationCancel(animation: Animator) {}
-
-                                override fun onAnimationRepeat(animation: Animator) {}
                             })
                         }.start()
-                    }
-
-                    override fun onAnimationRepeat(animation: Animation) {
-                        animating = true
                     }
                 })
             }
         )
     }
 
-    fun stepDown() {
-
-        if (animating || currentStep < 0) return
-
-        val currentDash = dashViews[currentStep--]
-
-        ValueAnimator.ofObject(ArgbEvaluator(), Color.GREEN, Color.RED).apply {
-            duration = dashAnimDuration / 2
-            addUpdateListener {
-                with(indicatorViews[currentStep + 2].background as GradientDrawable) {
-                    setColor(it.animatedValue as Int)
-                }
-            }
-            addListener(object : Animator.AnimatorListener {
-                override fun onAnimationStart(animation: Animator) {}
-
-                override fun onAnimationEnd(animation: Animator) {
-                    currentDash.startAnimation(
-                        ScaleAnimation(
-                            1f,
-                            0f,
-                            1f,
-                            1f
-                        ).apply {
-                            fillAfter = true
-                            duration = dashAnimDuration
-                            setAnimationListener(object : Animation.AnimationListener {
-                                override fun onAnimationStart(animation: Animation) {
-                                    animating = true
-                                }
-
-                                override fun onAnimationEnd(animation: Animation) {
-                                    animating = false
-                                }
-
-                                override fun onAnimationRepeat(animation: Animation) {
-                                    animating = true
-                                }
-                            })
-                        }
-                    )
-                }
-
-                override fun onAnimationCancel(animation: Animator) {}
-
-                override fun onAnimationRepeat(animation: Animator) {}
-            })
-        }.start()
+    private fun updateIndicatorColor(indicatorIdx: Int, color: Int) {
+        with(indicatorViews[indicatorIdx].background as GradientDrawable) { setColor(color) }
     }
 
+    interface AnimatorListener: Animator.AnimatorListener {
+        override fun onAnimationStart(animation: Animator) {}
+        override fun onAnimationEnd(animation: Animator) {}
+        override fun onAnimationCancel(animation: Animator) {}
+        override fun onAnimationRepeat(animation: Animator) {}
+    }
+
+    interface AnimationListener: Animation.AnimationListener {
+        override fun onAnimationStart(animation: Animation) {}
+        override fun onAnimationEnd(animation: Animation) {}
+        override fun onAnimationRepeat(animation: Animation) {}
+    }
 }

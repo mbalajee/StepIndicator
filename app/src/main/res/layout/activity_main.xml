@@ -30,4 +30,16 @@
         android:layout_height="wrap_content"
         android:text="Step down"/>
 
+    <Button
+        android:id="@+id/stepTo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Step to"/>
+
+    <EditText
+        android:id="@+id/stepToInput"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="Step to"/>
+
 </LinearLayout>
