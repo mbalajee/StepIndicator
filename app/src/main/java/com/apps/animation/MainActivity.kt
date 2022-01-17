@@ -14,7 +14,7 @@ class MainActivity : AppCompatActivity() {
         val stepIndicator = findViewById<StepIndicator>(R.id.stepIndicator)
 
         findViewById<Button>(R.id.draw).setOnClickListener {
-            stepIndicator.draw()
+//            stepIndicator.draw()
         }
 
         findViewById<Button>(R.id.animateUp).setOnClickListener {
